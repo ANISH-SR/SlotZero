@@ -5,11 +5,6 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
 import { Show, SignInButton, SignUpButton, UserButton } from '@clerk/nextjs';
-import { useWallet } from '@solana/wallet-adapter-react';
-import { useSolanaClerk } from '@/hooks/use-solana-clerk';
-import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
-import { PhantomIcon } from "@/components/icons/phantom-icon";
-import { Loader2 } from "lucide-react";
 
 const navLinks = [
   { name: "Capabilities",  href: "#features"      },
@@ -22,9 +17,6 @@ const navLinks = [
 export function Navigation() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
-  const { publicKey } = useWallet();
-  const { authenticate, loading: authLoading } = useSolanaClerk();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -88,31 +80,23 @@ export function Navigation() {
               />
             </Show>
             <Show when="signed-out">
-              <div className="flex items-center gap-3">
+              <SignInButton mode="modal">
                 <Button
-                  onClick={() => authenticate('Phantom')}
-                  disabled={authLoading}
                   size="sm"
-                  className="rounded-full bg-indigo-600 hover:bg-indigo-700 text-white px-5 gap-2 border-none shadow-lg shadow-indigo-500/20"
+                  variant="ghost"
+                  className="rounded-full text-white/70 hover:text-white hover:bg-white/5 cursor-pointer"
                 >
-                  {authLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <PhantomIcon className="w-4 h-4" />}
-                  Login with Phantom
+                  Sign in
                 </Button>
-                
-                <div className="flex items-center gap-1.5 ml-1 mr-1">
-                  <div className="w-px h-6 bg-white/10" />
-                </div>
-
-                <SignInButton mode="modal">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="rounded-full text-white/70 hover:text-white hover:bg-white/5 cursor-pointer px-4"
-                  >
-                    Legacy
-                  </Button>
-                </SignInButton>
-              </div>
+              </SignInButton>
+              <SignUpButton mode="modal">
+                <Button
+                  size="sm"
+                  className="rounded-full bg-white hover:bg-white/90 text-black px-6 cursor-pointer"
+                >
+                  Get Started
+                </Button>
+              </SignUpButton>
             </Show>
           </div>
 
@@ -161,34 +145,21 @@ export function Navigation() {
           
           <div className="flex flex-col gap-4 pt-8 border-t border-white/5">
             <Show when="signed-out">
-              <div className="flex flex-col gap-4">
-                <Button
-                  onClick={() => {
-                    authenticate('Phantom');
-                    setIsMobileMenuOpen(false);
-                  }}
-                  disabled={authLoading}
-                  className="w-full h-14 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white text-lg gap-3 border-none shadow-lg shadow-indigo-500/20"
+              <SignInButton mode="modal">
+                <Button 
+                  variant="outline" 
+                  className="w-full rounded-full h-14 text-lg border-white/20 text-white hover:bg-white/5"
                 >
-                  {authLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <PhantomIcon className="w-5 h-5" />}
-                  Login with Phantom
+                  Sign in
                 </Button>
-
-                <div className="flex items-center gap-4 py-2">
-                  <div className="h-px flex-1 bg-white/10" />
-                  <span className="text-xs font-mono text-white/30 uppercase">or</span>
-                  <div className="h-px flex-1 bg-white/10" />
-                </div>
-
-                <SignInButton mode="modal">
-                  <Button 
-                    variant="outline" 
-                    className="w-full rounded-full h-14 text-lg border-white/20 text-white hover:bg-white/5"
-                  >
-                    Legacy Sign in
-                  </Button>
-                </SignInButton>
-              </div>
+              </SignInButton>
+              <SignUpButton mode="modal">
+                <Button 
+                  className="w-full bg-white text-black rounded-full h-14 text-lg"
+                >
+                  Get Started
+                </Button>
+              </SignUpButton>
             </Show>
             <Show when="signed-in">
               <Link href="/dashboard" className="w-full">

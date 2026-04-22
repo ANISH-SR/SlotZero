@@ -27,7 +27,6 @@ export const metadata: Metadata = {
 }
 
 import { ClerkProvider } from '@clerk/nextjs'
-import { SolanaAuthProvider } from '@/components/auth/solana-auth-provider'
 
 export default function RootLayout({
   children,
@@ -38,10 +37,8 @@ export default function RootLayout({
     <ClerkProvider>
       <html lang="en" className="dark">
         <body className={`${instrumentSans.variable} ${instrumentSerif.variable} ${jetbrainsMono.variable} font-sans antialiased`}>
-          <SolanaAuthProvider>
-            {children}
-            <Analytics />
-          </SolanaAuthProvider>
+          {children}
+          <Analytics />
         </body>
       </html>
     </ClerkProvider>
