@@ -24,7 +24,7 @@ import {
   ChevronDown, ChevronUp, ArrowUpRight, ArrowDownLeft,
   Wifi
 } from 'lucide-react';
-import { pusherClient } from '@/lib/pusher-client';
+import { getPusherClient } from '@/lib/pusher-client';
 
 // ============================================================================
 // TYPES & INTERFACES (matching backend)
@@ -436,15 +436,15 @@ export default function SlotZeroMonitor() {
   // ============================================================================
 
   useEffect(() => {
-    // Subscribe to the live feed
-    const channel = pusherClient.subscribe('slot-zero-monitor');
+    // getPusherClient() only runs in the browser — safe from SSR
+    const client = getPusherClient();
+    const channel = client.subscribe('slot-zero-monitor');
     
     channel.bind('new-data', (data: any) => {
       if (isPaused) return;
 
       console.log('[Dashboard] Received live update via Pusher');
       
-      // Mark this specific token as LIVE (disables simulation for it)
       if (data.token) liveTokensRef.current.add(data.token);
       setIsLiveMode(true);
       setConnectionStatus('connected');
@@ -471,7 +471,7 @@ export default function SlotZeroMonitor() {
     });
 
     return () => {
-      pusherClient.unsubscribe('slot-zero-monitor');
+      client.unsubscribe('slot-zero-monitor');
     };
   }, [processEvent, updateTokenStats, createAnomalyAlert, isPaused]);
 
