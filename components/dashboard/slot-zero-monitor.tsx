@@ -24,7 +24,7 @@ import {
   ChevronDown, ChevronUp, ArrowUpRight, ArrowDownLeft,
   Wifi
 } from 'lucide-react';
-import { pusherClient } from '@/lib/pusher';
+import { pusherClient } from '@/lib/pusher-client';
 
 // ============================================================================
 // TYPES & INTERFACES (matching backend)
@@ -268,9 +268,10 @@ export default function SlotZeroMonitor() {
   const [stats, setStats] = useState({
     totalEvents: 0,
     eventsPerSecond: 0,
-    lastBatchTime: Date.now(),
     anomaliesDetected: 0,
   });
+  const liveTokensRef = useRef<Set<string>>(new Set());
+  const [isLiveMode, setIsLiveMode] = useState(false);
 
   // Refs
   const detectorRef = useRef(new AnomalyDetector());
@@ -403,33 +404,7 @@ export default function SlotZeroMonitor() {
     // Simulate connection establishment
     const connectTimeout = setTimeout(() => {
       setConnectionStatus('connected');
-      setActiveSources(new Set(['quicknode', 'rollup']));
     }, 1500);
-
-    // QuickNode Streams: 1000ms interval (Accelerated)
-    const quicknodeInterval = setInterval(() => {
-      if (isPaused) return;
-      const event = processEvent(generateQuickNodeEvent());
-      eventBufferRef.current.unshift(event);
-      updateTokenStats(event);
-
-      const alert = createAnomalyAlert(event);
-      if (alert) {
-        setAnomalies(prev => [alert, ...prev.slice(0, 15)]);
-        setStats(s => ({ ...s, anomaliesDetected: s.anomaliesDetected + 1 }));
-      }
-    }, 1000);
-
-    // Ephemeral Rollup batches: ~100ms interval (Accelerated)
-    const rollupInterval = setInterval(() => {
-      if (isPaused) return;
-      if (Math.random() > 0.6) { // 40% chance
-        const event = processEvent(generateRollupBatch());
-        eventBufferRef.current.unshift(event);
-        updateTokenStats(event);
-        setStats(s => ({ ...s, lastBatchTime: Date.now() }));
-      }
-    }, 100);
 
     // Update live events buffer: 200ms interval (Smoother refresh)
     const bufferInterval = setInterval(() => {
@@ -452,11 +427,9 @@ export default function SlotZeroMonitor() {
 
     return () => {
       clearTimeout(connectTimeout);
-      clearInterval(quicknodeInterval);
-      clearInterval(rollupInterval);
       clearInterval(bufferInterval);
     };
-  }, [processEvent, updateTokenStats, createAnomalyAlert, isPaused]);
+  }, [isPaused]);
 
   // ============================================================================
   // LIVE PUSHER SUBSCRIPTION
@@ -471,9 +444,12 @@ export default function SlotZeroMonitor() {
 
       console.log('[Dashboard] Received live update via Pusher');
       
-      // Transform incoming data into the monitor format
+      // Mark this specific token as LIVE (disables simulation for it)
+      if (data.token) liveTokensRef.current.add(data.token);
+      setIsLiveMode(true);
+      setConnectionStatus('connected');
       const event = processEvent({
-        token: data.token || 'JUP', // Default for demo if not provided
+        token: data.token || 'JUP', 
         tokenMint: data.tokenMint || Object.keys(TARGET_TOKENS)[0],
         source: 'live_stream',
         volume: data.volume || (Math.random() * 1000000 + 500000),
@@ -482,18 +458,15 @@ export default function SlotZeroMonitor() {
         avgPrice: data.avgPrice || getNextPrice(data.token || 'JUP'),
       });
 
-      // Update local state with real data
       eventBufferRef.current.unshift(event);
       updateTokenStats(event);
 
-      // Trigger anomaly check
       const alert = createAnomalyAlert(event);
       if (alert) {
         setAnomalies(prev => [alert, ...prev.slice(0, 15)]);
         setStats(s => ({ ...s, anomaliesDetected: s.anomaliesDetected + 1 }));
       }
 
-      // Briefly indicate heartbeat
       setActiveSources(prev => new Set(prev).add('live_stream'));
     });
 
@@ -589,17 +562,12 @@ export default function SlotZeroMonitor() {
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <button 
-              onClick={() => setIsPaused(!isPaused)}
-              className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-mono transition-all duration-300 border ${
-                isPaused 
-                  ? 'bg-yellow-500/20 text-yellow-500 border-yellow-500/40 hover:bg-yellow-500/30' 
-                  : 'bg-green-500/10 text-green-400 border-green-500/20 hover:bg-green-500/20'
-              }`}
-            >
-              <div className={`w-1.5 h-1.5 rounded-full ${isPaused ? 'bg-yellow-500' : 'bg-green-400 animate-pulse'}`} />
-              {isPaused ? 'STREAM PAUSED' : 'LIVE STREAM'}
-            </button>
+            <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-mono tracking-tighter ${
+              isLiveMode ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' : 'bg-white/5 text-white/20 border border-white/5'
+            }`}>
+              <div className={`w-1 h-1 rounded-full ${isLiveMode ? 'bg-purple-400 animate-pulse' : 'bg-white/20'}`} />
+              {isLiveMode ? 'RECEIVING STREAM' : 'FEED IDLE'}
+            </div>
             <div className="flex items-center gap-3">
             {anomalies.length > 0 && (
               <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-500/10 border border-red-500/20">
@@ -647,13 +615,13 @@ export default function SlotZeroMonitor() {
             </div>
             <div className="flex items-start gap-3">
               <div className="p-2 rounded bg-purple-500/10 border border-purple-500/20">
-                <Wifi className={`w-4 h-4 ${activeSources.has('live_stream') ? 'text-purple-400 animate-pulse' : 'text-white/20'}`} />
+                <Wifi className={`w-4 h-4 ${isLiveMode ? 'text-purple-400 animate-pulse' : 'text-white/20'}`} />
               </div>
               <div>
                 <p className="text-sm font-medium text-white">Live URL Feed</p>
                 <p className="text-xs text-white/40 mt-0.5">/api/stream</p>
-                <p className={`text-xs font-mono mt-1 ${activeSources.has('live_stream') ? 'text-purple-400' : 'text-white/20'}`}>
-                  {activeSources.has('live_stream') ? '● receiving data' : '○ waiting for feed'}
+                <p className={`text-xs font-mono mt-1 ${isLiveMode ? 'text-purple-400' : 'text-white/20'}`}>
+                  {isLiveMode ? '● receiving data' : '○ waiting for feed'}
                 </p>
               </div>
             </div>
@@ -1065,10 +1033,8 @@ export default function SlotZeroMonitor() {
           </div>
           <div className="grid grid-cols-4 gap-4">
             <div className="p-3 rounded border border-white/5">
-              <p className="text-xs text-white/30 mb-1">Last Batch</p>
-              <p className="font-mono text-sm text-white">
-                {((Date.now() - stats.lastBatchTime) / 1000).toFixed(1)}s ago
-              </p>
+              <p className="text-xs text-white/30 mb-1">Status</p>
+              <p className="font-mono text-sm text-green-400">Live Stream</p>
             </div>
             <div className="p-3 rounded border border-white/5">
               <p className="text-xs text-white/30 mb-1">Batch Size</p>
