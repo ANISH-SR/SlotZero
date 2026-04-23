@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { pusherServer } from '@/lib/pusher';
+import { getPusherServer } from '@/lib/pusher';
 
 export async function POST(req: Request) {
   try {
@@ -8,12 +8,12 @@ export async function POST(req: Request) {
     // 1. Log the ingestion
     console.log('[Live Stream Ingested]:', typeof body === 'object' ? 'JSON Data' : body);
 
-    // 2. Broadcast the data to the frontend via Pusher
-    // We send it to the 'slot-zero-monitor' channel on the 'new-data' event
+    // 2. Broadcast via Pusher (using the lazy-loaded instance)
     try {
+      const pusherServer = getPusherServer();
       await pusherServer.trigger('slot-zero-monitor', 'new-data', body);
     } catch (pusherError: any) {
-      console.warn('[Pusher Warning]: Could not broadcast (check API keys)', pusherError.message);
+      console.warn('[Pusher Warning]: Could not broadcast', pusherError.message);
     }
 
     // 3. Return the exact response required for verification
