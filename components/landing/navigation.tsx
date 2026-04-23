@@ -7,11 +7,11 @@ import { Menu, X } from "lucide-react";
 import { Show, SignInButton, SignUpButton, UserButton } from '@clerk/nextjs';
 
 const navLinks = [
-  { name: "Capabilities",  href: "#features"      },
-  { name: "Process",       href: "#how-it-works"  },
-  { name: "Infra",         href: "#infra"          },
-  { name: "Integrations",  href: "#integrations"  },
-  { name: "Security",      href: "#security"      },
+  { name: "Capabilities", href: "#features" },
+  { name: "Process", href: "#how-it-works" },
+  { name: "Infra", href: "#infra" },
+  { name: "Integrations", href: "#integrations" },
+  { name: "Security", href: "#security" },
 ];
 
 export function Navigation() {
@@ -28,17 +28,15 @@ export function Navigation() {
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
-        isScrolled 
-          ? "bg-background/80 backdrop-blur-xl border-b border-white/10" 
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${isScrolled
+          ? "bg-background/80 backdrop-blur-xl border-b border-white/10"
           : "bg-transparent"
-      }`}
+        }`}
     >
       <nav className="max-w-[1400px] mx-auto px-6 lg:px-12">
-        <div 
-          className={`flex items-center justify-between transition-all duration-500 ${
-            isScrolled ? "h-16" : "h-20"
-          }`}
+        <div
+          className={`flex items-center justify-between transition-all duration-500 ${isScrolled ? "h-16" : "h-20"
+            }`}
         >
           {/* Logo */}
           <a href="#" className="flex items-center gap-2 group">
@@ -71,7 +69,7 @@ export function Navigation() {
                   Dashboard
                 </Button>
               </Link>
-              <UserButton 
+              <UserButton
                 appearance={{
                   elements: {
                     userButtonAvatarBox: "w-8 h-8"
@@ -114,14 +112,13 @@ export function Navigation() {
           </button>
         </div>
       </nav>
-      
+
       {/* Mobile Menu Overlay */}
       <div
-        className={`md:hidden fixed inset-0 bg-background z-40 transition-all duration-500 ${
-          isMobileMenuOpen 
-            ? "opacity-100 pointer-events-auto" 
+        className={`md:hidden fixed inset-0 bg-background z-40 transition-all duration-500 ${isMobileMenuOpen
+            ? "opacity-100 pointer-events-auto"
             : "opacity-0 pointer-events-none"
-        }`}
+          }`}
         style={{ top: 0 }}
       >
         <div className="flex flex-col h-full px-8 pt-28 pb-8">
@@ -131,30 +128,29 @@ export function Navigation() {
                 key={link.name}
                 href={link.href}
                 onClick={() => setIsMobileMenuOpen(false)}
-                className={`text-5xl font-display text-white hover:text-green-400 transition-all duration-500 ${
-                  isMobileMenuOpen 
-                    ? "opacity-100 translate-y-0" 
+                className={`text-5xl font-display text-white hover:text-green-400 transition-all duration-500 ${isMobileMenuOpen
+                    ? "opacity-100 translate-y-0"
                     : "opacity-0 translate-y-4"
-                }`}
+                  }`}
                 style={{ transitionDelay: isMobileMenuOpen ? `${i * 75}ms` : "0ms" }}
               >
                 {link.name}
               </a>
             ))}
           </div>
-          
+
           <div className="flex flex-col gap-4 pt-8 border-t border-white/5">
             <Show when="signed-out">
               <SignInButton mode="modal">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   className="w-full rounded-full h-14 text-lg border-white/20 text-white hover:bg-white/5"
                 >
                   Sign in
                 </Button>
               </SignInButton>
               <SignUpButton mode="modal">
-                <Button 
+                <Button
                   className="w-full bg-white text-black rounded-full h-14 text-lg"
                 >
                   Get Started
@@ -163,7 +159,7 @@ export function Navigation() {
             </Show>
             <Show when="signed-in">
               <Link href="/dashboard" className="w-full">
-                <Button 
+                <Button
                   className="w-full bg-green-500 text-white rounded-full h-14 text-lg"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >

@@ -31,7 +31,7 @@ const footerLinks = {
 
 const socialLinks = [
   { name: "Twitter", href: "https://x.com/slotzer0" },
-  { name: "GitHub", href: "https://github.com/ANISH-SR" },
+  { name: "GitHub", href: "https://github.com/ANISH-SR/SlotZero" },
   { name: "LinkedIn", href: "#" },
 ];
 
