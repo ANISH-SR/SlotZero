@@ -1,5 +1,8 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, after } from 'next/server';
 import { pusherServer } from '@/lib/pusher-server';
+
+// Optional: Set region close to Pusher 'ap2' (Mumbai) for even lower latency if needed
+// export const preferredRegion = 'bom1'; 
 
 /**
  * Live Data Stream Endpoint
@@ -11,12 +14,15 @@ export async function POST(req: Request) {
     // 1. Log the ingestion
     console.log('[Live Stream Ingested]:', typeof body === 'object' ? 'JSON Data' : body);
 
-    // 2. Broadcast via Pusher (Server-side)
-    try {
-      await pusherServer.trigger('slot-zero-monitor', 'new-data', body);
-    } catch (pusherError: any) {
-      console.warn('[Pusher Warning]: Could not broadcast', pusherError.message);
-    }
+    // 2. Broadcast via Pusher in the background using Next.js after()
+    // This allows us to instantly return a 200 OK to QuickNode before Pusher finishes!
+    after(async () => {
+      try {
+        await pusherServer.trigger('slot-zero-monitor', 'new-data', body);
+      } catch (pusherError: any) {
+        console.warn('[Pusher Warning]: Could not broadcast', pusherError.message);
+      }
+    });
 
     return NextResponse.json({ 
       ok: true, 
