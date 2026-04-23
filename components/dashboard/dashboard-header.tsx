@@ -15,7 +15,7 @@ export function DashboardHeader() {
           <div className="flex items-center gap-1.5">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/logos/magicblock.png"
+              src="/logos/image.png"
               alt="Magicblock"
               className="w-5 h-5 object-contain"
             />

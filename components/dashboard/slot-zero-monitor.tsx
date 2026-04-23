@@ -221,9 +221,11 @@ const getNextPrice = (token: string): number => {
 // MOCK DATA GENERATORS (simulates multi-source streaming)
 // ============================================================================
 
-const generateQuickNodeEvent = (): Partial<TokenEvent> => {
+const generateQuickNodeEvent = (forcedToken?: string): Partial<TokenEvent> => {
   const mints = Object.keys(TARGET_TOKENS);
-  const mint = mints[Math.floor(Math.random() * mints.length)];
+  const mint = forcedToken 
+    ? mints.find(m => TARGET_TOKENS[m] === forcedToken)!
+    : mints[Math.floor(Math.random() * mints.length)];
   const token = TARGET_TOKENS[mint];
   return {
     token,
@@ -236,9 +238,11 @@ const generateQuickNodeEvent = (): Partial<TokenEvent> => {
   };
 };
 
-const generateRollupBatch = (): Partial<TokenEvent> => {
+const generateRollupBatch = (forcedToken?: string): Partial<TokenEvent> => {
   const mints = Object.keys(TARGET_TOKENS);
-  const mint = mints[Math.floor(Math.random() * mints.length)];
+  const mint = forcedToken 
+    ? mints.find(m => TARGET_TOKENS[m] === forcedToken)!
+    : mints[Math.floor(Math.random() * mints.length)];
   const token = TARGET_TOKENS[mint];
   return {
     token,
@@ -258,7 +262,27 @@ const generateRollupBatch = (): Partial<TokenEvent> => {
 export default function SlotZeroMonitor() {
   // State
   const [liveEvents, setLiveEvents] = useState<TokenEvent[]>([]);
-  const [tokenStats, setTokenStats] = useState<Map<string, TokenStats>>(new Map());
+  const [tokenStats, setTokenStats] = useState<Map<string, TokenStats>>(() => {
+    const initialMap = new Map<string, TokenStats>();
+    const now = Date.now();
+    ['JUP', 'ORCA', 'MNDE', 'COPE', 'DRIFT'].forEach(token => {
+      initialMap.set(token, {
+        token,
+        lastPrice: BASE_PRICES[token] || 0,
+        change24h: 0,
+        volume24h: 0,
+        volumeLastBatch: 0,
+        transfers: 0,
+        uniqueWallets: new Set(),
+        priceHistory: Array.from({ length: 90 }, (_, i) => ({
+          price: BASE_PRICES[token] || 0,
+          time: now - (90 - i) * 1000
+        })),
+        lastUpdate: now
+      });
+    });
+    return initialMap;
+  });
   const [anomalies, setAnomalies] = useState<AnomalyAlert[]>([]);
   const [expandedAnomaly, setExpandedAnomaly] = useState<string | null>(null);
   const [selectedToken, setSelectedToken] = useState<string>('JUP');
@@ -404,7 +428,47 @@ export default function SlotZeroMonitor() {
     // Simulate connection establishment
     const connectTimeout = setTimeout(() => {
       setConnectionStatus('connected');
+      setActiveSources(new Set(['quicknode', 'rollup']));
     }, 1500);
+
+    // QuickNode Streams Simulation: Only runs if data for a token isn't live yet
+    const quicknodeInterval = setInterval(() => {
+      if (isPaused) return;
+      
+      const tokens = Object.values(TARGET_TOKENS);
+      const tokenToSimulate = tokens[Math.floor(Math.random() * tokens.length)];
+      
+      // Skip if this specific token has received live data
+      if (liveTokensRef.current.has(tokenToSimulate)) return;
+
+      const event = processEvent(generateQuickNodeEvent(tokenToSimulate));
+      eventBufferRef.current.unshift(event);
+      updateTokenStats(event);
+
+      const alert = createAnomalyAlert(event);
+      if (alert) {
+        setAnomalies(prev => [alert, ...prev.slice(0, 15)]);
+        setStats(s => ({ ...s, anomaliesDetected: s.anomaliesDetected + 1 }));
+      }
+    }, 1000);
+
+    // Ephemeral Rollup Simulation: Only runs for tokens that are not live
+    const rollupInterval = setInterval(() => {
+      if (isPaused) return;
+      
+      const tokens = Object.values(TARGET_TOKENS);
+      const tokenToSimulate = tokens[Math.floor(Math.random() * tokens.length)];
+      
+      if (liveTokensRef.current.has(tokenToSimulate)) return;
+
+      if (Math.random() > 0.6) { // 40% chance
+        const event = processEvent(generateRollupBatch(tokenToSimulate));
+        eventBufferRef.current.unshift(event);
+        updateTokenStats(event);
+        // @ts-ignore
+        setStats(s => ({ ...s, lastBatchTime: Date.now() }));
+      }
+    }, 100);
 
     // Update live events buffer: 200ms interval (Smoother refresh)
     const bufferInterval = setInterval(() => {
@@ -427,9 +491,11 @@ export default function SlotZeroMonitor() {
 
     return () => {
       clearTimeout(connectTimeout);
+      clearInterval(quicknodeInterval);
+      clearInterval(rollupInterval);
       clearInterval(bufferInterval);
     };
-  }, [isPaused]);
+  }, [processEvent, updateTokenStats, createAnomalyAlert, isPaused]);
 
   // ============================================================================
   // LIVE PUSHER SUBSCRIPTION
