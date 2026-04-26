@@ -6,7 +6,7 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  serverExternalPackages: ['pusher'],
+  serverExternalPackages: ['pusher', '@prisma/client', 'prisma'],
   // Reduce memory usage
   experimental: {
     memoryBasedWorkersCount: false,
