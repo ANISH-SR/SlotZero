@@ -1,3 +1,5 @@
+![SlotZero Image](./image.png)
+
 # SlotZero: Real-Time Solana Token Monitoring & Agentic Trading Interface
 
 SlotZero is an advanced, ultra-low-latency real-time token monitoring and analytics dashboard built on the Solana blockchain. Engineered for precision and performance, it tracks price action, market liquidity, and large-scale asset movements with millisecond accuracy. Moreover, it serves as a high-fidelity command interface for an integrated AI trading agent (SendAI), actively capable of executing strategies and interacting with on-chain states natively.
