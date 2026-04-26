@@ -26,7 +26,6 @@ export const metadata: Metadata = {
   generator: 'v0.app',
 }
 
-import { ClerkProvider } from '@clerk/nextjs'
 
 export default function RootLayout({
   children,
@@ -34,13 +33,11 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <ClerkProvider>
-      <html lang="en" className="dark">
-        <body className={`${instrumentSans.variable} ${instrumentSerif.variable} ${jetbrainsMono.variable} font-sans antialiased`}>
-          {children}
-          <Analytics />
-        </body>
-      </html>
-    </ClerkProvider>
+    <html lang="en" className="dark">
+      <body className={`${instrumentSans.variable} ${instrumentSerif.variable} ${jetbrainsMono.variable} font-sans antialiased`}>
+        {children}
+        <Analytics />
+      </body>
+    </html>
   )
 }

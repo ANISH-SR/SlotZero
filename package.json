@@ -10,7 +10,6 @@
     "lint": "eslint ."
   },
   "dependencies": {
-    "@clerk/nextjs": "^7.2.3",
     "@hookform/resolvers": "^3.10.0",
     "@prisma/client": "^6.4.1",
     "@privy-io/react-auth": "^3.22.1",
