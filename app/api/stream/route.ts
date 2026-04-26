@@ -1,4 +1,5 @@
 import { NextResponse, after } from 'next/server';
+import { eventHub, EVENTS } from '@/lib/event-hub';
 import { pusherServer } from '@/lib/pusher-server';
 
 // Optional: Set region close to Pusher 'ap2' (Mumbai) for even lower latency if needed
@@ -9,7 +10,6 @@ const TARGET_TOKENS: Record<string, string> = {
   'orcaEKTdK7LKpm7Pf3B9qa9yLw17Kaqy9wAxeP9jMQC': 'ORCA',
   'MNDEF5v1xMTzWiwmA8BxPR9nkyAUdqXZAW6gChSE2FD': 'MNDE',
   'COPE9nME6zvJrVrnHfMRvccy2TNNmT8HJZJQ6oGLnUq': 'COPE',
-  'DRIFTtPirpZjce4F6L6RpxKiUm6fC1ujZEX6T67Q2p': 'DRIFT',
 };
 
 /**
@@ -17,7 +17,8 @@ const TARGET_TOKENS: Record<string, string> = {
  */
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
+    const raw = await req.text();
+    const body = raw ? JSON.parse(raw) : {};
 
     // 1. Optional QuickNode Webhook verification handling
     if (body && body.test === 'quicknode') {
@@ -33,7 +34,7 @@ export async function POST(req: Request) {
         for (const payload of payloads) {
           // Pass-through manual custom test events from curl
           if (payload.token && payload.volume) {
-            await pusherServer.trigger('slot-zero-monitor', 'new-data', payload);
+            eventHub.emit(EVENTS.NEW_DATA, payload);
             continue;
           }
 
@@ -73,7 +74,9 @@ export async function POST(req: Request) {
                 transfers: 1, 
                 uniqueWallets: 2
               };
-              await pusherServer.trigger('slot-zero-monitor', 'new-data', parsedEvent);
+              eventHub.emit(EVENTS.NEW_DATA, parsedEvent);
+              // Also broadcast via Pusher for real-time client updates
+              await pusherServer.trigger('slotzero-feed', 'new-event', parsedEvent);
             }
           }
         }
@@ -84,13 +87,15 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ 
       ok: true, 
+      source: 'quicknode-stream',
       received_at: new Date().toISOString() 
     });
   } catch (error: any) {
     console.error('[Stream Error]:', error.message);
     return NextResponse.json({ 
       ok: false, 
-      error: 'Invalid JSON payload' 
+      error: 'Invalid JSON payload',
+      hint: 'Send valid JSON body from QuickNode webhook or curl.'
     }, { status: 400 });
   }
 }

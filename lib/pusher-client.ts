@@ -12,6 +12,12 @@ export function getPusherClient(): PusherType {
     throw new Error('getPusherClient() must only be called in the browser');
   }
   if (!_client) {
+    if (!process.env.NEXT_PUBLIC_PUSHER_KEY || !process.env.NEXT_PUBLIC_PUSHER_CLUSTER) {
+      return {
+        subscribe: () => ({ bind: () => {}, unbind: () => {} }),
+        unsubscribe: () => {},
+      } as unknown as PusherType;
+    }
     // Dynamic require at runtime in the browser - guaranteed to get the browser build
     const PusherJS = require('pusher-js');
     const Ctor = PusherJS.default ?? PusherJS;

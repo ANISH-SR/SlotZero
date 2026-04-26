@@ -6,9 +6,15 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  // Prevents Turbopack from bundling the Node.js-only Pusher server SDK.
-  // It will be required at runtime instead, avoiding the CJS 'not a constructor' error.
   serverExternalPackages: ['pusher'],
+  // Reduce memory usage
+  experimental: {
+    memoryBasedWorkersCount: false,
+  },
+  // Disable source maps to save memory
+  productionBrowserSourceMaps: false,
+  // Limit concurrent features
+  staticPageGenerationTimeout: 60,
 }
 
 export default nextConfig

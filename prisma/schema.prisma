@@ -1,0 +1,115 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model TokenPrice {
+  id          String   @id @default(uuid())
+  token       String
+  price       Float
+  volume24h   Float
+  timestamp   DateTime @default(now())
+  source      String   // 'quicknode', 'jupiter', 'manual'
+  
+  @@index([token, timestamp])
+}
+
+model LimitOrder {
+  id             String        @id @default(uuid())
+  userAddress    String
+  telegramUserId Int?
+  telegramUser   TelegramUser? @relation("TelegramOrders", fields: [telegramUserId], references: [telegramId])
+  token          String
+  action         String        // 'BUY' or 'SELL'
+  threshold      Float
+  amount         Float
+  slippage       Float         @default(0.5)
+  status         String        @default("ACTIVE") // 'ACTIVE', 'EXECUTED', 'CANCELLED', 'EXPIRED'
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  executedAt     DateTime?
+  executionPrice Float?
+  txSignature    String?
+  privateTxHash  String?       // Private ER transaction hash
+  error          String?
+
+  @@index([userAddress, status])
+  @@index([token, status])
+  @@index([telegramUserId])
+}
+
+model Deal {
+  id               String   @id @default(uuid())
+  askId            String   @unique
+  seller           String
+  buyer            String?
+  token            String
+  amount           Float
+  pricePerUnit     Float
+  totalPrice       Float
+  status           String   @default("OPEN") // 'OPEN', 'NEGOTIATING', 'ESCROW_CREATED', 'COMPLETED', 'CANCELLED'
+  privateHash      String   @unique
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  negotiatedPrice  Float?
+  negotiatedAmount Float?
+  
+  escrow Escrow?
+  
+  @@index([seller, status])
+  @@index([buyer, status])
+  @@index([token, status])
+}
+
+model Escrow {
+  id                String   @id @default(uuid())
+  dealId            String   @unique
+  deal              Deal     @relation(fields: [dealId], references: [id])
+  escrowAddress     String
+  sellerTokenAccount String
+  buyerSolAccount   String
+  status            String   @default("FUNDS_LOCKED") // 'FUNDS_LOCKED', 'TOKENS_DEPOSITED', 'RELEASED', 'DISPUTED'
+  createdAt         DateTime @default(now())
+  releasedAt        DateTime?
+  txSignature       String
+  releaseSignature  String?
+  
+  @@index([escrowAddress])
+}
+
+model UserSettings {
+  id                  String   @id @default(uuid())
+  userAddress         String   @unique
+  privateOrdersEnabled Boolean  @default(true)
+  autoTradingEnabled  Boolean  @default(false)
+  agentFeePercent     Float    @default(0.5)
+  maxOrderSize        Float    @default(10000)
+  preferredSlippage   Float    @default(0.5)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model SystemLog {
+  id        String   @id @default(uuid())
+  type      String   // 'AGENT_EXECUTION', 'PRICE_UPDATE', 'ESCROW_EVENT', 'ERROR'
+  message   String
+  metadata  String?
+  timestamp DateTime @default(now())
+  
+  @@index([type, timestamp])
+}
+
+model TelegramUser {
+  id            String       @id @default(uuid())
+  telegramId    Int          @unique
+  username      String?
+  firstName     String
+  walletAddress String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  orders        LimitOrder[] @relation("TelegramOrders")
+}
