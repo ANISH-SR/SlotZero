@@ -19,7 +19,10 @@ export const solanaAgent = keypair
       new KeypairWallet(keypair, RPC_URL),
       RPC_URL,
       {
-        OPENAI_API_KEY: process.env.OPENAI_API_KEY || ''
+        // Use OpenRouter instead of OpenAI directly
+        OPENAI_API_KEY: process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY || '',
+        // @ts-ignore - OpenRouter base URL for accessing multiple models
+        OPENAI_BASE_URL: 'https://openrouter.ai/api/v1',
       }
     )
   : null
