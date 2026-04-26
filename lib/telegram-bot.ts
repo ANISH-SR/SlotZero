@@ -223,7 +223,7 @@ Your orders execute via *Private ER* - invisible to MEV bots!`;
 
   private async sendPrices(chatId: number) {
     const prices = await fetchTokenPrices();
-    
+
     let message = '📊 *Live Token Prices*\n\n';
     for (const [token, price] of Object.entries(prices)) {
       if (price > 0) {
@@ -282,7 +282,7 @@ Your orders execute via *Private ER* - invisible to MEV bots!`;
   private async createOrder(chatId: number, userId: number, action: 'BUY' | 'SELL', token: string, amount: number, price: number) {
     // Get user from DB
     const user = await prisma.telegramUser.findUnique({ where: { telegramId: userId } });
-    
+
     if (!user?.walletAddress) {
       return this.sendMessage(chatId, `🔗 *Connect your wallet first!*\n\nGo to the SlotZero dashboard and click "Connect Telegram" to link your wallet.`);
     }
@@ -306,7 +306,7 @@ Your orders execute via *Private ER* - invisible to MEV bots!`;
       await this.sendMessage(chatId, message);
 
       // Trigger agent execution
-      fetch('/api/agent/execute', { method: 'POST' }).catch(() => {});
+      fetch('/api/agent/execute', { method: 'POST' }).catch(() => { });
     } catch (error) {
       console.error('[Telegram] Failed to create order:', error);
       await this.sendMessage(chatId, `❌ Failed to create order. Please try again.`);
@@ -314,7 +314,7 @@ Your orders execute via *Private ER* - invisible to MEV bots!`;
   }
 
   private async sendActiveOrders(chatId: number, userId: number) {
-    const user = await prisma.telegramUser.findUnique({ 
+    const user = await prisma.telegramUser.findUnique({
       where: { telegramId: userId },
       include: { orders: { where: { status: 'ACTIVE' } } }
     });
@@ -368,12 +368,51 @@ Your orders execute via *Private ER* - invisible to MEV bots!`;
       return this.sendActiveOrders(chatId, userId);
     }
 
-    // Default response
-    await this.sendMessage(chatId, `🤔 I didn't understand that.\n\nTry:\n• "What's the price of ORCA?"\n• "Buy 100 ORCA at 1.40"\n• /help for all commands`);
+    // Default response using OpenRouter
+    try {
+      if (!process.env.OPENROUTER_API_KEY) {
+        return this.sendMessage(chatId, `🤔 I didn't understand that.\n\nTry:\n• "What's the price of ORCA?"\n• "Buy 100 ORCA at 1.40"\n• /help for all commands`);
+      }
+      
+      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
+          "HTTP-Referer": "https://slot-zero.vercel.app",
+          "X-Title": "SlotZero",
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          "model": "openai/gpt-4o-mini",
+          "messages": [
+            {
+              "role": "system",
+              "content": "You are SlotZero, a helpful AI trading assistant for Solana. You can help users check prices, set orders, and understand the crypto market. Answer concisely and politely. DO NOT output markdown formatting that breaks telegram markdown parser, stick to simple text or simple bolding with *asterisks*."
+            },
+            {
+              "role": "user",
+              "content": text
+            }
+          ]
+        })
+      });
+
+      const data = await response.json();
+      const answer = data.choices?.[0]?.message?.content;
+      
+      if (answer) {
+        await this.sendMessage(chatId, answer);
+      } else {
+        await this.sendMessage(chatId, `🤔 I'm having trouble connecting to my brain right now.`);
+      }
+    } catch (e) {
+      console.error('[OpenRouter] Error:', e);
+      await this.sendMessage(chatId, `🤔 I didn't understand that.\n\nTry:\n• "What's the price of ORCA?"\n• /help for all commands`);
+    }
   }
 
   private async sendConnectInstructions(chatId: number) {
-    const message = `🔗 *Connect Your Wallet*\n\n1. Visit: https://slotzero.vercel.app/dashboard\n2. Connect your Solana wallet\n3. Click "Connect Telegram" button\n4. Enter this code: \`${chatId}\`\n\nOnce connected, I can create orders on your behalf!`;
+    const message = `🔗 *Connect Your Wallet*\n\n1. Visit: https://slot-zero.vercel.app/dashboard\n2. Connect your Solana wallet\n3. Click "Connect Telegram" button\n4. Enter this code: \`${chatId}\`\n\nOnce connected, I can create orders on your behalf!`;
 
     await this.sendMessage(chatId, message);
   }
